@@ -6,7 +6,11 @@ import ()
 type Payload struct {
 	Language string        `json:"language"`
 	Files    []PayloadFile `json:"files"`
-	Timeout  int           `json:"timeout"` // in seconds
+
+	// Metadata
+	OperatingSystem string `json:"operating_system"`
+	Architecture    string `json:"architecture"`
+	Timeout         int    `json:"timeout"` // in seconds
 }
 
 // PayloadFile represents the content and attributes of a file.

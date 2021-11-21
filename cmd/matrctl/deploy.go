@@ -22,6 +22,8 @@ type runCodeCmd struct {
 	// Flags
 	data     string
 	language string
+	os       string
+	arch     string
 	filepath string
 	content  string
 	timeout  int
@@ -36,14 +38,18 @@ func (*runCodeCmd) Synopsis() string {
 }
 
 func (*runCodeCmd) Usage() string {
-	return `run-code [-data <data>] [-language <language>] [-filepath <filepath>] [-content <content>] [-timeout <timeout>]:
-	Run code for a given language.
+	return `run-code [-data <data>] [-language <language>] [-os <os>]
+         [-arch <arch>] [-filepath <filepath>] [-directory <dir>]
+         [-content <content>] [-timeout <timeout>]:
+  Run code for a given language.
 `
 }
 
 func (rc *runCodeCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&rc.data, "data", "", "JSON formatted payload data")
 	f.StringVar(&rc.language, "language", "", "Programming language of the content")
+	f.StringVar(&rc.os, "os", "debian", "The targeted operating system")
+	f.StringVar(&rc.arch, "arch", "amd64", "The targeted architecture")
 	f.StringVar(&rc.filepath, "filepath", "", "Location of file that contains the content")
 	f.StringVar(&rc.content, "content", "", "Code to run")
 	f.IntVar(&rc.timeout, "timeout", 30, "Run timeout in seconds")
@@ -89,6 +95,8 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 		return subcommands.ExitUsageError
 	}
 
+	payload.OperatingSystem = rc.os
+	payload.Architecture = rc.arch
 	payload.Timeout = rc.timeout
 
 	// Create the deployment using the code deployment controller

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crossedbot/common/golang/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 
@@ -68,7 +69,11 @@ func New(ctx context.Context, cli *client.Client) Controller {
 
 func (c *controller) CreateDeployment(payload runner.Payload) (runner.Result, error) {
 	// deploy container for the payload's programming language
-	id, err := c.deploy(payload.Language)
+	id, err := c.deploy(
+		payload.Language,
+		payload.OperatingSystem,
+		payload.Architecture,
+	)
 	if err != nil {
 		return runner.Result{}, err
 	}
@@ -103,11 +108,12 @@ func (c *controller) CreateDeployment(payload runner.Payload) (runner.Result, er
 
 // deploy deploys the appropriate container for the given language and returns
 // the container's identifier.
-func (c *controller) deploy(lang string) (string, error) {
-	image, err := deployer.GetImage(lang)
+func (c *controller) deploy(lang, os, arch string) (string, error) {
+	image, err := deployer.GetImage(lang, os, arch)
 	if err != nil {
 		return "", err
 	}
+	logger.Info(fmt.Sprintf("Deploying  image \"%s\"", image))
 	return c.deployer.Deploy(image)
 }
 
