@@ -110,24 +110,31 @@ func runCode(ctx context.Context, data []byte) Result {
 		payload.Timeout = DefaultRunTimeout
 	}
 	timeout := time.Duration(payload.Timeout) * time.Second
+	lang.SetPreBuildCommands(payload.PreBuildCommands)
+	lang.SetPostBuildCommands(payload.PostBuildCommands)
+	lang.SetPreRunCommands(payload.PreRunCommands)
+	lang.SetPostRunCommands(payload.PostRunCommands)
 	// build the code using the written files for the selected language
-	_, stderr, err := lang.Build(paths[0], paths[1:]...)
-	if stderr != "" || err != nil {
-		// TODO include both when building the error
-		if err == nil {
-			err = fmt.Errorf(stderr)
-		} else if stderr != "" {
-			err = fmt.Errorf("%s; %s", stderr, err)
-		}
-		return Result{
-			Error: fmt.Sprintf("Error while building: %s", err),
-		}
+	buildStreams, err := lang.Build(paths[0], paths[1:]...)
+	result := Result{
+		BuildCommands: buildStreams,
+		Error:         "",
+	}
+	if err != nil {
+		result.Error = fmt.Sprintf(
+			"Error while building: %s",
+			err.Error(),
+		)
+		return result
 	}
 	// run the built code and return the result
-	stdout, stderr, err := lang.Run(timeout)
-	result := Result{stdout, stderr, ""}
+	runStreams, err := lang.Run(timeout)
+	result.RunCommands = runStreams
 	if err != nil {
-		result.Error = err.Error()
+		result.Error = fmt.Sprintf(
+			"Error while running: %s",
+			err.Error(),
+		)
 	}
 	return result
 }
@@ -147,11 +154,13 @@ func writeFiles(files []PayloadFile) ([]string, error) {
 	// For each payload file, write it to the subdirectory we just created
 	var paths []string
 	for _, file := range files {
+		// Write the file to the directory
 		location := filepath.Join(dir, file.Name)
 		err := ioutil.WriteFile(location, []byte(file.Content), 0644)
 		if err != nil {
 			return []string{}, err
 		}
+		// Track the relative path to the file that was just written
 		rp, err := filepath.Rel(cwd, location)
 		if err != nil {
 			return []string{}, err
@@ -171,7 +180,7 @@ func createSubdirectory(parent string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(parent, "tmp", subdir)
+	dir := filepath.Join(parent, "tmp", subdir, "src")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}

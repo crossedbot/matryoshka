@@ -18,15 +18,30 @@ import (
 	"github.com/crossedbot/matryoshka/pkg/runner"
 )
 
+const (
+	ColorReset  = "\033[0m"
+	ColorRed    = "\033[31m"
+	ColorGreen  = "\033[32m"
+	ColorYellow = "\033[33m"
+	ColorBlue   = "\033[34m"
+	ColorPurple = "\033[35m"
+	ColorCyan   = "\033[36m"
+	ColorWhite  = "\033[37m"
+)
+
 type runCodeCmd struct {
 	// Flags
-	data     string
-	language string
-	os       string
-	arch     string
-	filepath string
-	content  string
-	timeout  int
+	data              string
+	language          string
+	os                string
+	arch              string
+	filepath          string
+	content           string
+	timeout           int
+	preBuildCommands  ArrayFlag
+	postBuildCommands ArrayFlag
+	preRunCommands    ArrayFlag
+	postRunCommands   ArrayFlag
 }
 
 func (*runCodeCmd) Name() string {
@@ -40,7 +55,9 @@ func (*runCodeCmd) Synopsis() string {
 func (*runCodeCmd) Usage() string {
 	return `run-code [-data <data>] [-language <language>] [-os <os>]
          [-arch <arch>] [-filepath <filepath>] [-directory <dir>]
-         [-content <content>] [-timeout <timeout>]:
+         [-content <content>] [-timeout <timeout>]
+         [-pre-build-command <cmd>]... [-post-build-commands <cmd>]...
+	 [-pre-run-command <cmd>]... [-post-run-commands <cmd>]...:
   Run code for a given language.
 `
 }
@@ -53,6 +70,10 @@ func (rc *runCodeCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&rc.filepath, "filepath", "", "Location of file that contains the content")
 	f.StringVar(&rc.content, "content", "", "Code to run")
 	f.IntVar(&rc.timeout, "timeout", 30, "Run timeout in seconds")
+	f.Var(&rc.preBuildCommands, "pre-build-command", "Run command before building the payload")
+	f.Var(&rc.postBuildCommands, "post-build-command", "Run command after building the payload")
+	f.Var(&rc.preRunCommands, "pre-run-command", "Run command before running the payload")
+	f.Var(&rc.postRunCommands, "post-run-command", "Run command after running the payload")
 }
 
 func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
@@ -98,6 +119,10 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 	payload.OperatingSystem = rc.os
 	payload.Architecture = rc.arch
 	payload.Timeout = rc.timeout
+	payload.PreBuildCommands = rc.preBuildCommands
+	payload.PostBuildCommands = rc.postBuildCommands
+	payload.PreRunCommands = rc.preRunCommands
+	payload.PostRunCommands = rc.postRunCommands
 
 	// Create the deployment using the code deployment controller
 	result, err := controller.V1().CreateDeployment(payload)
@@ -106,21 +131,8 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 		return subcommands.ExitFailure
 	}
 
-	// Check the result for errors
-	if result.Stderr != "" || result.Error != "" {
-		errStr := result.Stderr
-		if result.Error != "" {
-			if errStr != "" {
-				errStr += "; "
-			}
-			errStr += result.Error
-		}
-		fmt.Fprintf(os.Stderr, "%s: %s\n", rc.Name(), errStr)
-		return subcommands.ExitFailure
-	}
-
 	// Otherwise we can write the results output to STDOUT
-	fmt.Fprintf(os.Stdout, result.Stdout)
+	printOutput(result)
 
 	return subcommands.ExitSuccess
 }
@@ -178,4 +190,29 @@ func parseContentPayload(lang, content string) (runner.PayloadFile, error) {
 		Name:    fmt.Sprintf("%s.%s", filename, lang),
 		Content: content,
 	}, nil
+}
+
+func printOutput(result runner.Result) {
+	printOutputPlain(result)
+}
+
+func printOutputPlain(result runner.Result) {
+	for _, v := range result.BuildCommands {
+		fmt.Printf("%s+ %s\n", ColorYellow, v.Command)
+		if v.Stderr != "" {
+			fmt.Fprintf(os.Stderr, "%s%s", ColorRed, v.Stderr)
+		}
+		if v.Stdout != "" {
+			fmt.Fprintf(os.Stdout, "%s%s", ColorReset, v.Stdout)
+		}
+	}
+	for _, v := range result.RunCommands {
+		fmt.Printf("%s+ %s\n", ColorYellow, v.Command)
+		if v.Stderr != "" {
+			fmt.Fprintf(os.Stderr, "%s%s", ColorRed, v.Stderr)
+		}
+		if v.Stdout != "" {
+			fmt.Fprintf(os.Stdout, "%s%s", ColorReset, v.Stdout)
+		}
+	}
 }

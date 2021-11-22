@@ -1,6 +1,8 @@
 package runner
 
-import ()
+import (
+	"github.com/crossedbot/matryoshka/pkg/runner/languages"
+)
 
 // Payload represents payload's language and files.
 type Payload struct {
@@ -11,17 +13,23 @@ type Payload struct {
 	OperatingSystem string `json:"operating_system"`
 	Architecture    string `json:"architecture"`
 	Timeout         int    `json:"timeout"` // in seconds
+
+	// Commands
+	PreBuildCommands  []string `json:"pre_build_commands"`
+	PostBuildCommands []string `json:"post_build_commands"`
+	PreRunCommands    []string `json:"pre_run_commands"`
+	PostRunCommands   []string `json:"post_run_commands"`
+}
+
+// Result represents a the result of returned code.
+type Result struct {
+	BuildCommands languages.CommandStreams `json:"build_commands"`
+	RunCommands   languages.CommandStreams `json:"run_commands"`
+	Error         string                   `json:"error"`
 }
 
 // PayloadFile represents the content and attributes of a file.
 type PayloadFile struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
-}
-
-// Result represents a the result of returned code.
-type Result struct {
-	Stdout string `json:"stdout"`
-	Stderr string `json:"stderr"`
-	Error  string `json:"error"`
 }

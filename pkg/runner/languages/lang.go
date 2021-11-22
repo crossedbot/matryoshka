@@ -8,20 +8,37 @@ import (
 	"time"
 )
 
+type CommandStreams []Streams
+
+type Streams struct {
+	Command string `json:"command"`
+	Stdout  string `json:"stdout"`
+	Stderr  string `json:"stderr"`
+}
+
 // Language represents the interface to programming language.
 type Language interface {
 	// Build builds the given files. Returning the STDOUT and STDERR output
 	// data.
-	Build(mainFile string, otherFiles ...string) (string, string, error)
+	Build(mainFile string, otherFiles ...string) (CommandStreams, error)
 
 	// Run runs the built program and returns the STDOUT and STDERR output.
-	Run(timeout time.Duration) (string, string, error)
+	Run(timeout time.Duration) (CommandStreams, error)
+
+	SetPreBuildCommands(cmd []string)
+	SetPostBuildCommands(cmd []string)
+	SetPreRunCommands(cmd []string)
+	SetPostRunCommands(cmd []string)
 }
 
 // language implements the Language interface.
 type language struct {
-	BuildCommands []string
-	RunCommands   []string
+	PreBuildCommands  []string
+	BuildCommands     []string
+	PostBuildCommands []string
+	PreRunCommands    []string
+	RunCommands       []string
+	PostRunCommands   []string
 }
 
 // Languages is a list of known programming languages.
@@ -68,4 +85,10 @@ func execute(timeout time.Duration, exe string, args ...string) (string, string,
 			timeout.String())
 	}
 	return stdout.String(), stderr.String(), err
+}
+
+func buildCommandLine(l string) (string, []string) {
+	l = strings.TrimSpace(l)
+	parts := strings.Split(l, " ")
+	return parts[0], parts[1:]
 }

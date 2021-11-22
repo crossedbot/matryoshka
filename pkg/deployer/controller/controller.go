@@ -93,7 +93,9 @@ func (c *controller) CreateDeployment(payload runner.Payload) (runner.Result, er
 		for _, line := range lines {
 			var result runner.Result
 			err := json.Unmarshal(line, &result)
-			if err == nil && (runner.Result{}) != result {
+			hasResults := len(result.BuildCommands) != 0 ||
+				len(result.RunCommands) != 0
+			if err == nil && (hasResults || result.Error != "") {
 				output <- result
 			}
 		}
