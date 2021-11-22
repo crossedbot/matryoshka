@@ -118,6 +118,7 @@ func runCode(ctx context.Context, data []byte) Result {
 	buildStreams, err := lang.Build(paths[0], paths[1:]...)
 	result := Result{
 		BuildCommands: buildStreams,
+		RunCommands:   languages.CommandStreams{},
 		Error:         "",
 	}
 	if err != nil {

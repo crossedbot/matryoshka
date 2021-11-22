@@ -38,6 +38,7 @@ type runCodeCmd struct {
 	filepath          string
 	content           string
 	timeout           int
+	outputFormat      OutputFormat
 	preBuildCommands  ArrayFlag
 	postBuildCommands ArrayFlag
 	preRunCommands    ArrayFlag
@@ -55,7 +56,7 @@ func (*runCodeCmd) Synopsis() string {
 func (*runCodeCmd) Usage() string {
 	return `run-code [-data <data>] [-language <language>] [-os <os>]
          [-arch <arch>] [-filepath <filepath>] [-directory <dir>]
-         [-content <content>] [-timeout <timeout>]
+         [-content <content>] [-timeout <timeout>] [-output-format <fmt>]
          [-pre-build-command <cmd>]... [-post-build-commands <cmd>]...
 	 [-pre-run-command <cmd>]... [-post-run-commands <cmd>]...:
   Run code for a given language.
@@ -70,6 +71,7 @@ func (rc *runCodeCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&rc.filepath, "filepath", "", "Location of file that contains the content")
 	f.StringVar(&rc.content, "content", "", "Code to run")
 	f.IntVar(&rc.timeout, "timeout", 30, "Run timeout in seconds")
+	f.Var(&rc.outputFormat, "output-format", "Set the output format, plain|json (default \"plain\")")
 	f.Var(&rc.preBuildCommands, "pre-build-command", "Run command before building the payload")
 	f.Var(&rc.postBuildCommands, "post-build-command", "Run command after building the payload")
 	f.Var(&rc.preRunCommands, "pre-run-command", "Run command before running the payload")
@@ -116,6 +118,10 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 		return subcommands.ExitUsageError
 	}
 
+	outputFormat := rc.outputFormat
+	if outputFormat.String() == "" {
+		outputFormat = OutputFormatPlain
+	}
 	payload.OperatingSystem = rc.os
 	payload.Architecture = rc.arch
 	payload.Timeout = rc.timeout
@@ -132,7 +138,7 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 	}
 
 	// Otherwise we can write the results output to STDOUT
-	printOutput(result)
+	printOutput(outputFormat, result)
 
 	return subcommands.ExitSuccess
 }
@@ -192,8 +198,13 @@ func parseContentPayload(lang, content string) (runner.PayloadFile, error) {
 	}, nil
 }
 
-func printOutput(result runner.Result) {
-	printOutputPlain(result)
+func printOutput(format OutputFormat, result runner.Result) {
+	switch format {
+	case OutputFormatPlain:
+		printOutputPlain(result)
+	case OutputFormatJson:
+		printOutputJson(result)
+	}
 }
 
 func printOutputPlain(result runner.Result) {
@@ -214,5 +225,12 @@ func printOutputPlain(result runner.Result) {
 		if v.Stdout != "" {
 			fmt.Fprintf(os.Stdout, "%s%s", ColorReset, v.Stdout)
 		}
+	}
+}
+
+func printOutputJson(result runner.Result) {
+	b, err := json.MarshalIndent(result, "", "    ")
+	if err == nil {
+		fmt.Fprintf(os.Stdout, string(b))
 	}
 }
