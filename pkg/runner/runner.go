@@ -155,8 +155,13 @@ func writeFiles(files []PayloadFile) ([]string, error) {
 	// For each payload file, write it to the subdirectory we just created
 	var paths []string
 	for _, file := range files {
+		// Create parent directory before writing the file itself
+		location := filepath.Join(dir, file.Path)
+		if err := os.MkdirAll(location, 0700); err != nil {
+			return []string{}, err
+		}
 		// Write the file to the directory
-		location := filepath.Join(dir, file.Name)
+		location = filepath.Join(location, file.Name)
 		err := ioutil.WriteFile(location, []byte(file.Content), 0644)
 		if err != nil {
 			return []string{}, err

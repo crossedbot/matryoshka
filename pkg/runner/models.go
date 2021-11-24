@@ -1,6 +1,10 @@
 package runner
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/crossedbot/matryoshka/pkg/runner/languages"
 )
 
@@ -31,5 +35,20 @@ type Result struct {
 // PayloadFile represents the content and attributes of a file.
 type PayloadFile struct {
 	Name    string `json:"name"`
+	Path    string `json:"path"`
 	Content string `json:"content"`
 }
+
+type PayloadFiles []PayloadFile
+
+func (pf PayloadFiles) Len() int { return len(pf) }
+
+func (pf PayloadFiles) Less(i, j int) bool {
+	fpath1 := filepath.Join(pf[i].Path, pf[i].Name)
+	depth1 := len(strings.Split(fpath1, string(os.PathSeparator)))
+	fpath2 := filepath.Join(pf[j].Path, pf[j].Name)
+	depth2 := len(strings.Split(fpath2, string(os.PathSeparator)))
+	return depth1 < depth2
+}
+
+func (pf PayloadFiles) Swap(i, j int) { pf[i], pf[j] = pf[j], pf[i] }

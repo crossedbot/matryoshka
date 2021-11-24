@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/google/subcommands"
@@ -36,6 +37,7 @@ type runCodeCmd struct {
 	os                string
 	arch              string
 	filepath          string
+	directory         string
 	content           string
 	timeout           int
 	outputFormat      OutputFormat
@@ -69,6 +71,7 @@ func (rc *runCodeCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&rc.os, "os", "debian", "The targeted operating system")
 	f.StringVar(&rc.arch, "arch", "amd64", "The targeted architecture")
 	f.StringVar(&rc.filepath, "filepath", "", "Location of file that contains the content")
+	f.StringVar(&rc.directory, "directory", "", "File directory that contains content")
 	f.StringVar(&rc.content, "content", "", "Code to run")
 	f.IntVar(&rc.timeout, "timeout", 30, "Run timeout in seconds")
 	f.Var(&rc.outputFormat, "output-format", "Set the output format, plain|json (default \"plain\")")
@@ -90,7 +93,8 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 			fmt.Fprintf(os.Stderr, "%s: %s\n", rc.Name(), err)
 			return subcommands.ExitUsageError
 		}
-	} else if rc.language != "" && (rc.filepath != "" || rc.content != "") {
+	} else if rc.language != "" &&
+		(rc.filepath != "" || rc.directory != "" || rc.content != "") {
 		payload.Language = rc.language
 		// Parse the filepath for the contents of the payload
 		if rc.filepath != "" {
@@ -101,6 +105,13 @@ func (rc *runCodeCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...inte
 				return subcommands.ExitUsageError
 			}
 			payload.Files = append(payload.Files, payloadFile)
+		} else if rc.directory != "" {
+			payload.Files, err = parseDirectoryPayload(rc.directory)
+			if err != nil {
+				fmt.Fprintf(os.Stderr,
+					"%s: %s\n", rc.Name(), err)
+				return subcommands.ExitUsageError
+			}
 		} else {
 			// Else use the provided code content
 			payloadFile, err := parseContentPayload(
@@ -183,6 +194,40 @@ func parseFilePayload(f string) (runner.PayloadFile, error) {
 		Name:    filepath.Base(f),
 		Content: string(b),
 	}, nil
+}
+
+func visitDirectory(d string, files *runner.PayloadFiles) filepath.WalkFunc {
+	d = filepath.Dir(d)
+	return func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			if rel, err := filepath.Rel(d, path); err == nil {
+				pathTo, name := filepath.Split(rel)
+				b, err := ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				*files = append(*files, runner.PayloadFile{
+					Name:    name,
+					Path:    pathTo,
+					Content: string(b),
+				})
+			}
+		}
+		return nil
+	}
+}
+
+func parseDirectoryPayload(d string) ([]runner.PayloadFile, error) {
+	var files runner.PayloadFiles
+	d = filepath.Clean(d)
+	if err := filepath.Walk(d, visitDirectory(d, &files)); err != nil {
+		return []runner.PayloadFile{}, err
+	}
+	sort.Sort(files)
+	return files, nil
 }
 
 func parseContentPayload(lang, content string) (runner.PayloadFile, error) {
