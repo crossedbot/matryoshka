@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/crossedbot/matryoshka/pkg/deployer"
+	"github.com/crossedbot/matryoshka/pkg/deployer/models"
 	"github.com/crossedbot/matryoshka/pkg/runner"
 )
 
@@ -25,6 +26,9 @@ const (
 type Controller interface {
 	// CreateDeployment runs a given code payload and returns the results.
 	CreateDeployment(runner.Payload) (runner.Result, error)
+
+	// ListImages lists the Docker images available for the given filter.
+	ListImages(lang, os, arch string) ([]models.ImageSummary, error)
 }
 
 // controller implments the Controller interface.
@@ -106,6 +110,20 @@ func (c *controller) CreateDeployment(payload runner.Payload) (runner.Result, er
 	}
 	// Read and return results
 	return read(output)
+}
+
+func (c *controller) ListImages(lang, os, arch string) ([]models.ImageSummary, error) {
+	filter := models.ImageFilter{}
+	if lang != "" {
+		filter.Add("language", lang)
+	}
+	if os != "" {
+		filter.Add("operating_system", os)
+	}
+	if arch != "" {
+		filter.Add("architecture", arch)
+	}
+	return c.deployer.ListImages(filter)
 }
 
 // deploy deploys the appropriate container for the given language and returns

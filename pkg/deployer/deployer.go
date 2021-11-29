@@ -4,11 +4,19 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+
+	"github.com/crossedbot/matryoshka/pkg/deployer/models"
+)
+
+var (
+	ROOT_IMAGE_NAME = "matryoshka"
 )
 
 // Deployer represents a container manager that is capable of deploying a given
@@ -32,6 +40,9 @@ type Deployer interface {
 	// Stop stops the given container, forcefully stopping the container
 	// when the given timeout expires.
 	Stop(containerId string, timeout time.Duration) error
+
+	// ListImages returns a list of images that meet the given filter
+	ListImages(filter models.ImageFilter) ([]models.ImageSummary, error)
 }
 
 // deployer implements the Deployer interface.
@@ -111,4 +122,58 @@ func (d *deployer) WaitAndRead(containerId string, condition container.WaitCondi
 
 func (d *deployer) Stop(containerId string, timeout time.Duration) error {
 	return d.ContainerStop(d.ctx, containerId, &timeout)
+}
+
+func (d *deployer) ListImages(filter models.ImageFilter) ([]models.ImageSummary, error) {
+	lang := "*"
+	if v := filter.Get("language"); len(v) > 0 {
+		lang = v
+	}
+	opSys := "*"
+	if v := filter.Get("operating_system"); len(v) > 0 {
+		opSys = v
+	}
+	arch := "*"
+	if v := filter.Get("architecture"); len(v) > 0 {
+		arch = v
+	}
+	reference := fmt.Sprintf(
+		"%s/%s:%s-%s",
+		ROOT_IMAGE_NAME, lang, opSys, arch,
+	)
+	filters := filters.NewArgs(filters.KeyValuePair{
+		Key:   "reference",
+		Value: reference,
+	})
+	imageSummaries, err := d.ImageList(
+		d.ctx,
+		types.ImageListOptions{Filters: filters},
+	)
+	if err != nil {
+		return []models.ImageSummary{}, err
+	}
+	var images []models.ImageSummary
+	for _, summary := range imageSummaries {
+		id := summary.ID
+		if strings.Contains(summary.ID, ":") {
+			id = strings.Split(summary.ID, ":")[1]
+		}
+		repo := ""
+		tag := ""
+		if len(summary.RepoTags) > 0 {
+			repoTagParts := strings.Split(summary.RepoTags[0], ":")
+			repo = repoTagParts[0]
+			if len(repoTagParts) > 1 {
+				tag = repoTagParts[1]
+			}
+		}
+		images = append(images, models.ImageSummary{
+			ID:         id,
+			Repository: repo,
+			Tag:        tag,
+			CreatedAt:  time.Unix(summary.Created, 0),
+			Size:       summary.Size,
+		})
+	}
+	return images, nil
 }

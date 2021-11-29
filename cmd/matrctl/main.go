@@ -18,6 +18,7 @@ func main() {
 
 	// application commands
 	subcommands.Register(&runCodeCmd{}, "")
+	subcommands.Register(&listImagesCmd{}, "")
 
 	// execute
 	flag.Parse()
