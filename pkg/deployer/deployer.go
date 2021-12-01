@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	ROOT_IMAGE_NAME = "matryoshka"
+	ImageNameRoot = "matryoshka"
 )
 
 // Deployer represents a container manager that is capable of deploying a given
@@ -41,8 +41,13 @@ type Deployer interface {
 	// when the given timeout expires.
 	Stop(containerId string, timeout time.Duration) error
 
-	// ListImages returns a list of images that meet the given filter
-	ListImages(filter models.ImageFilter) ([]models.ImageSummary, error)
+	// FindImages finds and returns a list of images that meet the given
+	// filter
+	FindImages(filter models.ImageFilter) ([]models.ImageSummary, error)
+
+	// GetImage returns the image summary for a given language, operating
+	// system, and architecture label
+	GetImage(lang, os, arch string) (models.ImageSummary, error)
 }
 
 // deployer implements the Deployer interface.
@@ -124,22 +129,22 @@ func (d *deployer) Stop(containerId string, timeout time.Duration) error {
 	return d.ContainerStop(d.ctx, containerId, &timeout)
 }
 
-func (d *deployer) ListImages(filter models.ImageFilter) ([]models.ImageSummary, error) {
+func (d *deployer) FindImages(filter models.ImageFilter) ([]models.ImageSummary, error) {
 	lang := "*"
 	if v := filter.Get("language"); len(v) > 0 {
-		lang = v
+		lang = strings.ToLower(v)
 	}
 	opSys := "*"
 	if v := filter.Get("operating_system"); len(v) > 0 {
-		opSys = v
+		opSys = strings.ToLower(v)
 	}
 	arch := "*"
 	if v := filter.Get("architecture"); len(v) > 0 {
-		arch = v
+		arch = strings.ToLower(v)
 	}
 	reference := fmt.Sprintf(
 		"%s/%s:%s-%s",
-		ROOT_IMAGE_NAME, lang, opSys, arch,
+		ImageNameRoot, lang, opSys, arch,
 	)
 	filters := filters.NewArgs(filters.KeyValuePair{
 		Key:   "reference",
@@ -176,4 +181,19 @@ func (d *deployer) ListImages(filter models.ImageFilter) ([]models.ImageSummary,
 		})
 	}
 	return images, nil
+}
+
+func (d *deployer) GetImage(lang, os, arch string) (models.ImageSummary, error) {
+	images, err := d.FindImages(models.ImageFilter{
+		"language":         []string{lang},
+		"operating_system": []string{os},
+		"architecture":     []string{arch},
+	})
+	if err != nil {
+		return models.ImageSummary{}, err
+	}
+	if len(images) == 0 {
+		return models.ImageSummary{}, fmt.Errorf("Failed to find image")
+	}
+	return images[0], nil
 }

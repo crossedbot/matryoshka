@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -46,6 +47,10 @@ type ImageSummary struct {
 	Tag        string    `json:"tag"`
 	CreatedAt  time.Time `json:"created_at"`
 	Size       int64     `json:"size"`
+}
+
+func (sum ImageSummary) Name() string {
+	return fmt.Sprintf("%s:%s", sum.Repository, sum.Tag)
 }
 
 func (sum ImageSummary) Language() string {

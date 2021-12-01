@@ -123,18 +123,18 @@ func (c *controller) ListImages(lang, os, arch string) ([]models.ImageSummary, e
 	if arch != "" {
 		filter.Add("architecture", arch)
 	}
-	return c.deployer.ListImages(filter)
+	return c.deployer.FindImages(filter)
 }
 
 // deploy deploys the appropriate container for the given language and returns
 // the container's identifier.
 func (c *controller) deploy(lang, os, arch string) (string, error) {
-	image, err := deployer.GetImage(lang, os, arch)
+	image, err := c.deployer.GetImage(lang, os, arch)
 	if err != nil {
 		return "", err
 	}
-	logger.Info(fmt.Sprintf("Deploying  image \"%s\"", image))
-	return c.deployer.Deploy(image)
+	logger.Info(fmt.Sprintf("Deploying  image \"%s\"", image.Name()))
+	return c.deployer.Deploy(image.Name())
 }
 
 // write writes the given payload to the given container.
