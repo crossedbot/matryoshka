@@ -1,4 +1,25 @@
-FROM debian:buster-slim
+ARG OS=debian:bullseye-slim
+ARG GOLANG_VERSION=1.17-bullseye
+ARG CGO=0
+ARG GOOS=linux
+ARG GOARCH=amd64
+
+#-------------------------------------------------------------------------------
+FROM golang:${GOLANG_VERSION} AS gobuilder
+
+ARG CGO
+ARG GOOS
+ARG GOARCH
+
+RUN go version
+WORKDIR /go/src/
+COPY . .
+RUN cd cmd/runner && \
+    CGO_ENABLED='${CGO}' GOOS='${GOOS}' GOARCH='${GOARCH}' \
+    make -f /go/src/Makefile build
+
+#-------------------------------------------------------------------------------
+FROM ${OS}
 
 ENV NESTED_HOME /usr/local/nested
 ENV PATH ${NESTED_HOME}/bin:$PATH
@@ -22,6 +43,6 @@ RUN useradd -m -d /home/nested -g nested -s /bin/bash nested
 USER nested
 
 RUN mkdir -vp ${NESTED_HOME}
-COPY --from=matryoshka/builder /go/bin/runner ./bin/runner
+COPY --from=gobuilder /go/bin/runner ./bin/runner
 
 CMD [ "runner" ]

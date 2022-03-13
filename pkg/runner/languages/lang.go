@@ -50,7 +50,7 @@ var Languages = []Language{
 // LanguageStrings is a list of labels for programming languages.
 var LanguageStrings = []string{
 	"c",
-	"go",
+	"golang",
 }
 
 // ParseLanguage returns the Language for the given label.
