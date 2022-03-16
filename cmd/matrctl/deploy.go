@@ -253,6 +253,9 @@ func printOutput(format OutputFormat, result runner.Result) {
 }
 
 func printOutputPlain(result runner.Result) {
+	if result.Error != "" {
+		fmt.Fprintf(os.Stderr, "%s%s\n", ColorRed, result.Error)
+	}
 	for _, v := range result.BuildCommands {
 		fmt.Printf("%s+ %s\n", ColorYellow, v.Command)
 		if v.Stderr != "" {
