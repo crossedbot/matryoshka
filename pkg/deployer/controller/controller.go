@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crossedbot/common/golang/config"
 	"github.com/crossedbot/common/golang/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -41,7 +42,7 @@ type controller struct {
 // Config represents the definable configuration for the container manager.
 type Config struct {
 	DockerHost       string `toml:"docker_host"`
-	DockerApiVersion string `toml:"DockerApiVersion"`
+	DockerApiVersion string `toml:"docker_api_version"`
 	DockerTimeout    int    `toml:"docker_timeout"` // in seconds
 }
 
@@ -51,12 +52,35 @@ var controllerOnce sync.Once
 var V1 = func() Controller {
 	// initialize the controller only once
 	controllerOnce.Do(func() {
-		// TODO use configuration
-		ctx := context.Background()
-		cli, err := client.NewClientWithOpts(
+		var cfg Config
+		if err := config.Load(&cfg); err != nil {
+			panic(err)
+		}
+		options := []client.Opt{
 			client.FromEnv,
 			client.WithAPIVersionNegotiation(),
-		)
+		}
+		if cfg.DockerHost != "" {
+			options = append(
+				options,
+				client.WithHost(cfg.DockerHost),
+			)
+		}
+		if cfg.DockerTimeout > 0 {
+			to := time.Duration(cfg.DockerTimeout)
+			options = append(
+				options,
+				client.WithTimeout(to*time.Second),
+			)
+		}
+		if cfg.DockerApiVersion != "" {
+			options = append(
+				options,
+				client.WithVersion(cfg.DockerApiVersion),
+			)
+		}
+		ctx := context.Background()
+		cli, err := client.NewClientWithOpts(options...)
 		if err != nil {
 			panic(err)
 		}

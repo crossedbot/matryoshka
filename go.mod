@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
