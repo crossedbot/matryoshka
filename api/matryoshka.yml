@@ -1,0 +1,157 @@
+openapi: '3.0.2'
+info:
+  title: Code runner Service
+  version: '0.0.1'
+  description: |
+    Containerized code running service.
+servers:
+  - url: https://api.server.test/v1
+paths:
+  /deployer/run:
+    post:
+      summary: Deploy Code
+      description: Deploy and run code inside a descrete environment
+      tags:
+        - deployer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Payload"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Payload:
+      description: Payload language and files
+      type: object
+      required:
+        - "langauge"
+        - "files"
+      properties:
+        language:
+          description: The name of the payload's language
+          type: string
+          enum: ["c", "golang"]
+          example: c
+        files:
+          description: THe payload's files
+          type: array
+          items:
+            $ref: '#/components/schemas/PayloadFile'
+        operating_system:
+          description: The targeted operating system
+          type: string
+          example: "debian"
+        architecture:
+          description: The targeted architecture
+          type: string
+          example: "amd64"
+        timeout:
+          description: Execution timeout in seconds
+          type: integer
+          example: 30
+        pre_build_commands:
+          description: List of commands to run before building the payload
+          type: array
+          items:
+            type: string
+        post_build_commands:
+          description: List of commands to run after building the payload
+          type: array
+          items:
+            type: string
+        pre_run_commands:
+          description: List of commands to run before running the payload
+          type: array
+          items:
+            type: string
+        post_run_commands:
+          description: List of commands to run after running the payload
+          type: array
+          items:
+            type: string
+    PayloadFile:
+      description: The payload file's descriptor
+      type: object
+      properties:
+        name:
+          description: The name of payload file
+          type: string
+          example: main.c
+        content:
+          description: The contents of the payload file
+          type: string
+          example: "#include <stdio.h>\n\nint\nmain(int argc, char *argv[])\n{\n\tprintf(\"Hello World!\\n\");\n}\n"
+    Result:
+      description: The results from running the payload
+      type: object
+      properties:
+        build_commands:
+          description: The standard streams output of the build commands
+          type: object
+          $ref: '#/components/schemas/CommandStreams'
+        run_commands:
+          description: The standard streams output of the run commands
+          type: object
+          $ref: '#/components/schemas/CommandStreams'
+        error:
+          description: Errors that happen during the deployment of payload
+          type: string
+          example: "unknown language: notc"
+    CommandStreams:
+      description: A list of standard streams
+      type: array
+      items:
+        $ref: '#/components/schemas/CommandStream'
+    CommandStream:
+      description: Standard streams container
+      type: object
+      properties:
+        command:
+          description: The command that produced the output streams
+          type: string
+        stdout:
+          description: Standard output stream
+          type: string
+        stderr:
+          description: Standard error stream
+          type: string
+    Error:
+        description: Base error object
+        type: object
+        required:
+          - code
+          - message
+        properties:
+          code:
+            type: integer
+          message:
+            type: string
+
+  responses:
+    BadRequest:
+      description: Bad request (400)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error (500)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The specified resource was not found (404)
