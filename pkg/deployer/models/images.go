@@ -63,13 +63,13 @@ func (sum ImageSummary) Language() string {
 }
 
 func (sum ImageSummary) OperatingSystem() string {
-	parts := strings.Split(sum.Repository, "-")
+	parts := strings.Split(sum.Tag, "-")
 	return parts[0]
 }
 
 func (sum ImageSummary) Architecture() string {
 	arch := ""
-	parts := strings.Split(sum.Repository, "-")
+	parts := strings.Split(sum.Tag, "-")
 	if len(parts) > 1 {
 		arch = parts[1]
 	}

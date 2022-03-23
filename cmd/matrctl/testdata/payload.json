@@ -1,0 +1,8 @@
+{
+	"language": "c",
+	"files": [{
+		"name": "test.c",
+		"path": "/some/path/to",
+		"content": "#include <stdio.h>\n\nint\nmain(int argc, char *argv[])\n{\n\tprintf(\"Hello World!\\n\");\n}\n"
+	}]
+}

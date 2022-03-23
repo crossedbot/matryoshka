@@ -48,6 +48,9 @@ func (pf PayloadFiles) Less(i, j int) bool {
 	depth1 := len(strings.Split(fpath1, string(os.PathSeparator)))
 	fpath2 := filepath.Join(pf[j].Path, pf[j].Name)
 	depth2 := len(strings.Split(fpath2, string(os.PathSeparator)))
+	if depth1 == depth2 {
+		return strings.Compare(fpath1, fpath2) < 0
+	}
 	return depth1 < depth2
 }
 
