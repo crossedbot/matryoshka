@@ -3,8 +3,8 @@ FROM matryoshka/runner
 USER root
 WORKDIR /tmp
 RUN set -eux; \
-    URL='https://dl.google.com/go/go1.17.8.linux-amd64.tar.gz'; \
-    SHA256='980e65a863377e69fd9b67df9d8395fd8e93858e7a24c9f55803421e453f4f99'; \
+    URL='https://dl.google.com/go/go1.19.1.linux-amd64.tar.gz'; \
+    SHA256='acc512fbab4f716a8f97a8b3fbaa9ddd39606a28be6c2515ef7c6c6311acffde'; \
     whoami && pwd; \
     wget -O go.tgz.asc "${URL}.asc" --progress=dot:giga; \
     wget -O go.tgz "${URL}" --progress=dot:giga; \

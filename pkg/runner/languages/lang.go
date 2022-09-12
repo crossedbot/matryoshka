@@ -47,6 +47,7 @@ var Languages = []Language{
 	LanguageGo,
 }
 
+// TODO add multiple versions of the same language (go and golang)
 // LanguageStrings is a list of labels for programming languages.
 var LanguageStrings = []string{
 	"c",

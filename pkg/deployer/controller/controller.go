@@ -53,9 +53,7 @@ var V1 = func() Controller {
 	// initialize the controller only once
 	controllerOnce.Do(func() {
 		var cfg Config
-		if err := config.Load(&cfg); err != nil {
-			panic(err)
-		}
+		config.Load(&cfg)
 		options := []client.Opt{
 			client.FromEnv,
 			client.WithAPIVersionNegotiation(),

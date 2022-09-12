@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for target in builder runner; do
+for target in runner; do
 	echo "Build> matryoshka/${target}"
 	docker build -t matryoshka/$target \
 		-f deployments/docker/$target.Dockerfile .
